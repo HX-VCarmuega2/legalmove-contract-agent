@@ -31,6 +31,10 @@ No opines todavía sobre qué cambió en el contenido de cada cláusula ni \
 redactes un resumen de cambios: eso lo hace otro analista a partir de tu mapa. \
 Tu output es un insumo de trabajo interno, no un reporte final — usá texto \
 estructurado (listas, encabezados), no hace falta que sea JSON.
+
+Listá únicamente secciones que existan literalmente en el texto que te \
+pasaron. No agregues secciones "típicas" de este tipo de contrato que no \
+estén escritas en los documentos, aunque sean habituales en la práctica.
 """
 
 

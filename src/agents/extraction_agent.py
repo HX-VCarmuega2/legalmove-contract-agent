@@ -36,6 +36,14 @@ cambio real.
 concretas, no generalidades como "se actualizaron algunos términos".
 - Tu respuesta debe cumplir exactamente el schema indicado (sections_changed, \
 topics_touched, summary_of_the_change).
+
+Verificación obligatoria antes de responder: por cada cambio que vayas a \
+reportar, releé el CONTRATO ORIGINAL y la ENMIENDA y confirmá que podés citar \
+la frase o cifra exacta que lo respalda en al menos uno de los dos textos (o \
+su ausencia, si es una adición o eliminación). Si no podés señalar esa \
+evidencia textual concreta, NO incluyas ese cambio, aunque te parezca \
+plausible o típico de este tipo de contrato. Nunca completes con contenido \
+"esperable" que no esté escrito literalmente en los documentos.
 """
 
 
