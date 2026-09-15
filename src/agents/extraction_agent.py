@@ -25,16 +25,35 @@ cambio real introducido por la enmienda y clasificarlo en:
 - ADICIÓN: una cláusula, obligación o condición que no existía en el original.
 - ELIMINACIÓN: una cláusula, obligación o condición del original que \
 desapareció en la enmienda.
-- MODIFICACIÓN: una cláusula que existe en ambos documentos pero cuyo \
-contenido (montos, plazos, alcance, partes, condiciones) cambió.
+- MODIFICACIÓN: una cláusula que existe en ambos documentos pero cuyo título o \
+cuyo contenido (montos, plazos, alcance, partes, condiciones) cambió.
+
+Método de trabajo, antes de redactar la respuesta:
+Recorré el mapa de contexto par por par. Para cada par de cláusulas \
+correspondientes, compará por separado:
+a) el TÍTULO, y
+b) el TEXTO, palabra por palabra: identificá qué palabras están en uno de los \
+dos textos y no en el otro. Prestá especial atención a los calificativos que \
+acotan o amplían una obligación (del tipo "irrevocable", "no reembolsable", \
+"solidariamente", "indefinida"): si un calificativo así desapareció o \
+apareció, es un cambio que debés reportar, aunque el resto de la oración sea \
+casi igual.
+Anotá todos los cambios encontrados y recién entonces redactá el resumen. El \
+resumen debe cubrir TODOS los cambios que encontraste, no solo los más \
+llamativos: si una cláusula cambió de título y además de contenido, mencioná \
+las dos cosas.
 
 Reglas:
 - Basate únicamente en lo que dicen los textos, nunca inventes cambios que no \
 estén respaldados por el contenido.
 - Si dos redacciones dicen literalmente lo mismo con otras palabras, NO es un \
-cambio real.
+cambio real. Quitar o agregar una palabra que cambia el alcance de una \
+obligación SÍ es un cambio real.
 - Sé específico en el resumen: mencioná montos, plazos o condiciones \
 concretas, no generalidades como "se actualizaron algunos términos".
+- En sections_changed, identificá cada sección por su número y título. Si el \
+título cambió, usá el formato "N. Título original → Título nuevo". Si la \
+sección es nueva, agregá "(nueva)"; si fue eliminada, agregá "(eliminada)".
 - Tu respuesta debe cumplir exactamente el schema indicado (sections_changed, \
 topics_touched, summary_of_the_change).
 
