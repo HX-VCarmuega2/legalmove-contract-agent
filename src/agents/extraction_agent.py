@@ -38,10 +38,18 @@ acotan o amplían una obligación (del tipo "irrevocable", "no reembolsable", \
 "solidariamente", "indefinida"): si un calificativo así desapareció o \
 apareció, es un cambio que debés reportar, aunque el resto de la oración sea \
 casi igual.
-Anotá todos los cambios encontrados y recién entonces redactá el resumen. El \
-resumen debe cubrir TODOS los cambios que encontraste, no solo los más \
-llamativos: si una cláusula cambió de título y además de contenido, mencioná \
-las dos cosas.
+Anotá todos los cambios encontrados y recién entonces redactá el resumen.
+
+Cómo redactar el resumen:
+Escribí una oración por cada cláusula que cambió, en el orden en que aparecen \
+en el contrato. En cada oración citá textualmente la parte que cambió en los \
+dos documentos, con el formato: de "<texto exacto del original>" a "<texto \
+exacto de la enmienda>". Citá solo el fragmento relevante, no la cláusula \
+entera. Si una cláusula tiene más de un cambio (por ejemplo, cambió el título \
+y además el contenido, o se reescribió una frase y además se quitó una \
+palabra), citá cada uno de esos cambios por separado dentro de la misma \
+oración. Si la cláusula es nueva o fue eliminada, no hace falta citar: \
+describí qué obligación se agrega o desaparece.
 
 Reglas:
 - Basate únicamente en lo que dicen los textos, nunca inventes cambios que no \
