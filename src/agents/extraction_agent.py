@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from src.models import ContractChangeOutput
+from src.retry import with_retries
 
 _SYSTEM_PROMPT = """\
 Sos un Auditor Legal especializado en control de cambios (redlining) de \
@@ -54,6 +55,7 @@ class ExtractionAgent:
         base_llm = llm or ChatOpenAI(model="gpt-4o", temperature=0)
         self.structured_llm = base_llm.with_structured_output(ContractChangeOutput)
 
+    @with_retries()
     def run(self, context_map: str, original_text: str, amendment_text: str) -> ContractChangeOutput:
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),

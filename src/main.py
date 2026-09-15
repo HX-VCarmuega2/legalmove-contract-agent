@@ -6,8 +6,12 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 
 from dotenv import load_dotenv
+from openai import OpenAIError
+from pydantic import ValidationError
 
 load_dotenv()
 
@@ -15,8 +19,10 @@ from langfuse import get_client
 
 from src.agents.contextualization_agent import ContextualizationAgent
 from src.agents.extraction_agent import ExtractionAgent
-from src.image_parser import ParsedDocument, parse_contract_image
+from src.image_parser import ParsedDocument, parse_contract_image, validate_image_path
 from src.models import ContractChangeOutput
+
+REQUIRED_ENV_VARS = ("OPENAI_API_KEY",)
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,7 +77,16 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
             input={"context_map": context_map},
         ) as span:
             extraction_agent = ExtractionAgent()
-            result = extraction_agent.run(context_map, original_doc.text, amendment_doc.text)
+            raw_result = extraction_agent.run(context_map, original_doc.text, amendment_doc.text)
+            try:
+                # Segunda validación explícita: aunque with_structured_output
+                # ya fuerza el schema del lado del modelo, tratamos el output
+                # del agente como un límite de confianza y lo re-validamos
+                # antes de dejarlo salir del pipeline.
+                result = ContractChangeOutput.model_validate(raw_result.model_dump())
+            except ValidationError as exc:
+                span.update(level="ERROR", status_message=str(exc))
+                raise
             span.update(output=result.model_dump())
 
         root_span.update(output=result.model_dump())
@@ -82,7 +97,33 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
 
 def main() -> None:
     args = parse_args()
-    result = run_pipeline(args.original_path, args.amendment_path)
+    try:
+        # Fail fast: validamos credenciales y archivos ANTES de instanciar
+        # agentes o llamar a cualquier API, para dar un error claro e
+        # inmediato en vez de un traceback confuso a mitad de pipeline.
+        missing_env = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+        if missing_env:
+            raise RuntimeError(
+                f"Faltan variables de entorno: {', '.join(missing_env)}. "
+                "Copiá .env.example a .env y completá tus keys."
+            )
+        validate_image_path(args.original_path)
+        validate_image_path(args.amendment_path)
+
+        result = run_pipeline(args.original_path, args.amendment_path)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error de entrada: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except ValidationError as exc:
+        print(
+            f"El resultado del Agente de Extracción no cumple el schema esperado:\n{exc}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except (RuntimeError, OpenAIError) as exc:
+        print(f"Error llamando a la API: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     print(result.model_dump_json(indent=2))
 
 

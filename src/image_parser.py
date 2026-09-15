@@ -12,6 +12,8 @@ from pathlib import Path
 
 from openai import OpenAI
 
+from src.retry import with_retries
+
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 VISION_MODEL = "gpt-4o"
 
@@ -59,6 +61,7 @@ def encode_image_to_base64(image_path: str | Path) -> tuple[str, str]:
     return encoded, mime_type
 
 
+@with_retries()
 def parse_contract_image(image_path: str | Path, client: OpenAI | None = None) -> ParsedDocument:
     """Extrae el texto completo de un contrato escaneado usando GPT-4o Vision."""
     client = client or OpenAI()

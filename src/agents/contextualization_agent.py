@@ -9,6 +9,8 @@ from __future__ import annotations
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from src.retry import with_retries
+
 _SYSTEM_PROMPT = """\
 Sos un Analista Legal Senior especializado en derecho contractual, con años de \
 experiencia comparando versiones de contratos comerciales.
@@ -44,6 +46,7 @@ class ContextualizationAgent:
     def __init__(self, llm: ChatOpenAI | None = None) -> None:
         self.llm = llm or ChatOpenAI(model="gpt-4o", temperature=0)
 
+    @with_retries()
     def run(self, original_text: str, amendment_text: str) -> str:
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
