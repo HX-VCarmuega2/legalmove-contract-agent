@@ -10,8 +10,11 @@ from __future__ import annotations
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from src.agents.results import ExtractionResult, normalize_usage
 from src.models import ContractChangeOutput
 from src.retry import with_retries
+
+AGENT_MODEL = "gpt-4o"
 
 _SYSTEM_PROMPT = """\
 Sos un Auditor Legal especializado en control de cambios (redlining) de \
@@ -79,11 +82,16 @@ class ExtractionAgent:
     """Segundo agente del pipeline: hace el handoff desde el mapa de contexto al JSON final."""
 
     def __init__(self, llm: ChatOpenAI | None = None) -> None:
-        base_llm = llm or ChatOpenAI(model="gpt-4o", temperature=0)
-        self.structured_llm = base_llm.with_structured_output(ContractChangeOutput)
+        base_llm = llm or ChatOpenAI(model=AGENT_MODEL, temperature=0)
+        # include_raw=True devuelve también el mensaje original del modelo, que
+        # es de donde salen los tokens consumidos. Sin esto, LangChain entrega
+        # solo el objeto parseado y esa métrica se pierde.
+        self.structured_llm = base_llm.with_structured_output(
+            ContractChangeOutput, include_raw=True
+        )
 
     @with_retries()
-    def run(self, context_map: str, original_text: str, amendment_text: str) -> ContractChangeOutput:
+    def run(self, context_map: str, original_text: str, amendment_text: str) -> ExtractionResult:
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(
@@ -98,4 +106,18 @@ class ExtractionAgent:
                 )
             ),
         ]
-        return self.structured_llm.invoke(messages)
+        response = self.structured_llm.invoke(messages)
+
+        # Con include_raw=True, un error de parseo no lanza excepción: queda
+        # en parsing_error y "parsed" viene vacío. Lo convertimos en un error
+        # explícito para que no siga viajando un None por el pipeline.
+        if response.get("parsing_error") or response.get("parsed") is None:
+            raise RuntimeError(
+                "El Agente de Extracción no devolvió una respuesta que cumpla el schema: "
+                f"{response.get('parsing_error')}"
+            )
+
+        return ExtractionResult(
+            output=response["parsed"],
+            usage=normalize_usage(response["raw"].usage_metadata),
+        )

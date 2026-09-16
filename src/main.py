@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAIError
@@ -17,12 +18,13 @@ load_dotenv()
 
 from langfuse import get_client
 
-from src.agents.contextualization_agent import ContextualizationAgent
+from src.agents.contextualization_agent import AGENT_MODEL, ContextualizationAgent
 from src.agents.extraction_agent import ExtractionAgent
-from src.image_parser import ParsedDocument, parse_contract_image, validate_image_path
+from src.image_parser import VISION_MODEL, ParsedDocument, parse_contract_image, validate_image_path
 from src.models import ContractChangeOutput
 
 REQUIRED_ENV_VARS = ("OPENAI_API_KEY",)
+PIPELINE_VERSION = "1.0"
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,14 +38,24 @@ def parse_args() -> argparse.Namespace:
 
 def _traced_parse(langfuse, span_name: str, image_path: str) -> ParsedDocument:
     """Corre parse_contract_image() dentro de un span hijo de Langfuse."""
+    path = Path(image_path)
     with langfuse.start_as_current_observation(
         name=span_name,
         as_type="generation",
-        model="gpt-4o",
+        model=VISION_MODEL,
         input={"image_path": image_path},
+        metadata={
+            "file_name": path.name,
+            "file_size_kb": round(path.stat().st_size / 1024, 1),
+            "image_detail": "high",
+        },
     ) as span:
         doc = parse_contract_image(image_path)
-        span.update(output=doc.text, usage_details=doc.usage)
+        span.update(
+            output=doc.text,
+            usage_details=doc.usage,
+            metadata={"extracted_chars": len(doc.text)},
+        )
         return doc
 
 
@@ -55,6 +67,11 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
         name="contract-analysis",
         as_type="span",
         input={"original_path": original_path, "amendment_path": amendment_path},
+        metadata={
+            "pipeline_version": PIPELINE_VERSION,
+            "vision_model": VISION_MODEL,
+            "agent_model": AGENT_MODEL,
+        },
     ) as root_span:
 
         original_doc = _traced_parse(langfuse, "parse_original_contract", original_path)
@@ -63,21 +80,30 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
         with langfuse.start_as_current_observation(
             name="contextualization_agent",
             as_type="generation",
-            model="gpt-4o",
+            model=AGENT_MODEL,
             input={"original_text": original_doc.text, "amendment_text": amendment_doc.text},
+            metadata={
+                "original_chars": len(original_doc.text),
+                "amendment_chars": len(amendment_doc.text),
+            },
         ) as span:
             context_agent = ContextualizationAgent()
-            context_map = context_agent.run(original_doc.text, amendment_doc.text)
-            span.update(output=context_map)
+            context_result = context_agent.run(original_doc.text, amendment_doc.text)
+            context_map = context_result.context_map
+            span.update(output=context_map, usage_details=context_result.usage)
 
         with langfuse.start_as_current_observation(
             name="extraction_agent",
             as_type="generation",
-            model="gpt-4o",
+            model=AGENT_MODEL,
             input={"context_map": context_map},
+            metadata={"context_map_chars": len(context_map)},
         ) as span:
             extraction_agent = ExtractionAgent()
-            raw_result = extraction_agent.run(context_map, original_doc.text, amendment_doc.text)
+            extraction_result = extraction_agent.run(
+                context_map, original_doc.text, amendment_doc.text
+            )
+            raw_result = extraction_result.output
             try:
                 # Segunda validación explícita: aunque with_structured_output
                 # ya fuerza el schema del lado del modelo, tratamos el output
@@ -87,7 +113,11 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
             except ValidationError as exc:
                 span.update(level="ERROR", status_message=str(exc))
                 raise
-            span.update(output=result.model_dump())
+            span.update(
+                output=result.model_dump(),
+                usage_details=extraction_result.usage,
+                metadata={"sections_changed_count": len(result.sections_changed)},
+            )
 
         root_span.update(output=result.model_dump())
 

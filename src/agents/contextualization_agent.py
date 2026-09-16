@@ -9,7 +9,10 @@ from __future__ import annotations
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from src.agents.results import ContextResult, normalize_usage
 from src.retry import with_retries
+
+AGENT_MODEL = "gpt-4o"
 
 _SYSTEM_PROMPT = """\
 Sos un Analista Legal Senior especializado en derecho contractual, con años de \
@@ -44,10 +47,10 @@ class ContextualizationAgent:
     """Primer agente del pipeline: entiende la estructura, no el contenido cambiado."""
 
     def __init__(self, llm: ChatOpenAI | None = None) -> None:
-        self.llm = llm or ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = llm or ChatOpenAI(model=AGENT_MODEL, temperature=0)
 
     @with_retries()
-    def run(self, original_text: str, amendment_text: str) -> str:
+    def run(self, original_text: str, amendment_text: str) -> ContextResult:
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(
@@ -61,4 +64,7 @@ class ContextualizationAgent:
             ),
         ]
         response = self.llm.invoke(messages)
-        return response.content
+        return ContextResult(
+            context_map=response.content,
+            usage=normalize_usage(response.usage_metadata),
+        )

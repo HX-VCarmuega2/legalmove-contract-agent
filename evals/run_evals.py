@@ -52,8 +52,8 @@ def run_once(
     """Corre un caso una vez, imprime el resultado y devuelve si pasó todos los chequeos."""
     amendment_text = render_amendment(case.amendment_clauses)
     try:
-        context_map = context_agent.run(ORIGINAL_TEXT, amendment_text)
-        result = extraction_agent.run(context_map, ORIGINAL_TEXT, amendment_text)
+        context_map = context_agent.run(ORIGINAL_TEXT, amendment_text).context_map
+        result = extraction_agent.run(context_map, ORIGINAL_TEXT, amendment_text).output
     except Exception as exc:
         print(f"ERROR al correr el caso: {exc}")
         return False
