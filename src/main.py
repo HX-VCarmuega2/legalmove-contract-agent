@@ -1,6 +1,7 @@
 """Entry point del pipeline de comparación de contratos.
 
-Uso:
+Uso (las dos formas son equivalentes):
+    python src/main.py <contrato_original.jpg> <enmienda.jpg>
     python -m src.main <contrato_original.jpg> <enmienda.jpg>
 """
 from __future__ import annotations
@@ -9,6 +10,13 @@ import argparse
 import os
 import sys
 from pathlib import Path
+
+# Si el archivo se ejecuta directamente (python src/main.py), Python agrega
+# src/ al path de búsqueda en vez de la raíz del proyecto, y los imports
+# "from src.xxx" no resuelven. Agregamos la raíz a mano para que las dos
+# formas de ejecución funcionen igual.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 from openai import OpenAIError

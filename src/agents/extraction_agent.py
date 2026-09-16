@@ -108,6 +108,14 @@ class ExtractionAgent:
         ]
         response = self.structured_llm.invoke(messages)
 
+        raw = response.get("raw")
+        if raw is not None and raw.response_metadata.get("finish_reason") == "length":
+            raise RuntimeError(
+                "El Agente de Extracción se quedó sin tokens y su respuesta quedó "
+                "truncada. Es probable que el contrato sea demasiado largo para una "
+                "sola llamada."
+            )
+
         # Con include_raw=True, un error de parseo no lanza excepción: queda
         # en parsing_error y "parsed" viene vacío. Lo convertimos en un error
         # explícito para que no siga viajando un None por el pipeline.
