@@ -12,6 +12,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
+from src.errors import TranscriptionRefusedError
 from src.retry import with_retries
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -141,6 +142,7 @@ def parse_contract_image(
         )
 
     text = choice.message.content or ""
+    usage = response.usage.model_dump() if response.usage else {}
 
     # El modelo puede responder algo tipo "Lo siento, no puedo ayudar con eso"
     # en vez de transcribir (por ejemplo, si la imagen es ilegible o si se
@@ -148,12 +150,11 @@ def parse_contract_image(
     # Un contrato transcripto nunca es tan corto: si lo es, algo salió mal y
     # es preferible cortar acá que pasarle un texto basura a los agentes.
     if len(text.strip()) < MIN_TRANSCRIPTION_CHARS:
-        raise RuntimeError(
+        raise TranscriptionRefusedError(
             f"La transcripción de {image_path} es sospechosamente corta "
             f"({len(text.strip())} caracteres). El modelo puede no haber podido leer "
-            f"la imagen. Respuesta recibida: {text.strip()!r}"
+            f"la imagen. Respuesta recibida: {text.strip()!r}",
+            usage=usage,
         )
-
-    usage = response.usage.model_dump() if response.usage else {}
 
     return ParsedDocument(text=text, model=VISION_MODEL, usage=usage)

@@ -9,6 +9,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 # Si el archivo se ejecuta directamente (python src/main.py), Python agrega
@@ -33,6 +35,7 @@ from src.models import ContractChangeOutput
 
 REQUIRED_ENV_VARS = ("OPENAI_API_KEY",)
 PIPELINE_VERSION = "1.0"
+TOTAL_STEPS = 4
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,7 +44,34 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("original_path", help="Path a la imagen del contrato original (JPEG/PNG)")
     parser.add_argument("amendment_path", help="Path a la imagen de la enmienda (JPEG/PNG)")
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="No muestra el progreso de cada etapa (stdout sigue siendo solo el JSON)",
+    )
     return parser.parse_args()
+
+
+@contextmanager
+def step(number: int, description: str, *, quiet: bool):
+    """Muestra el progreso de una etapa y cuánto tardó.
+
+    El progreso va a stderr, nunca a stdout: así la salida estándar queda
+    con el JSON puro y el comando se puede redirigir a un archivo o
+    encadenar con otro proceso sin que el progreso lo ensucie.
+    """
+    if quiet:
+        yield
+        return
+
+    print(f"[{number}/{TOTAL_STEPS}] {description}... ", end="", file=sys.stderr, flush=True)
+    started = time.perf_counter()
+    try:
+        yield
+    except Exception:
+        print("ERROR", file=sys.stderr, flush=True)
+        raise
+    print(f"{time.perf_counter() - started:.1f}s", file=sys.stderr, flush=True)
 
 
 def _traced_parse(langfuse, span_name: str, image_path: str) -> ParsedDocument:
@@ -67,7 +97,9 @@ def _traced_parse(langfuse, span_name: str, image_path: str) -> ParsedDocument:
         return doc
 
 
-def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutput:
+def run_pipeline(
+    original_path: str, amendment_path: str, quiet: bool = False
+) -> ContractChangeOutput:
     """Ejecuta el pipeline completo: parsing -> Agente 1 -> Agente 2."""
     langfuse = get_client()
 
@@ -82,8 +114,11 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
         },
     ) as root_span:
 
-        original_doc = _traced_parse(langfuse, "parse_original_contract", original_path)
-        amendment_doc = _traced_parse(langfuse, "parse_amendment_contract", amendment_path)
+        with step(1, "Transcribiendo el contrato original", quiet=quiet):
+            original_doc = _traced_parse(langfuse, "parse_original_contract", original_path)
+
+        with step(2, "Transcribiendo la enmienda", quiet=quiet):
+            amendment_doc = _traced_parse(langfuse, "parse_amendment_contract", amendment_path)
 
         with langfuse.start_as_current_observation(
             name="contextualization_agent",
@@ -95,10 +130,11 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
                 "amendment_chars": len(amendment_doc.text),
             },
         ) as span:
-            context_agent = ContextualizationAgent()
-            context_result = context_agent.run(original_doc.text, amendment_doc.text)
-            context_map = context_result.context_map
-            span.update(output=context_map, usage_details=context_result.usage)
+            with step(3, "Agente 1: mapeando la estructura de ambos documentos", quiet=quiet):
+                context_agent = ContextualizationAgent()
+                context_result = context_agent.run(original_doc.text, amendment_doc.text)
+                context_map = context_result.context_map
+                span.update(output=context_map, usage_details=context_result.usage)
 
         with langfuse.start_as_current_observation(
             name="extraction_agent",
@@ -107,10 +143,11 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
             input={"context_map": context_map},
             metadata={"context_map_chars": len(context_map)},
         ) as span:
-            extraction_agent = ExtractionAgent()
-            extraction_result = extraction_agent.run(
-                context_map, original_doc.text, amendment_doc.text
-            )
+            with step(4, "Agente 2: identificando y clasificando los cambios", quiet=quiet):
+                extraction_agent = ExtractionAgent()
+                extraction_result = extraction_agent.run(
+                    context_map, original_doc.text, amendment_doc.text
+                )
             raw_result = extraction_result.output
             try:
                 # Segunda validación explícita: aunque with_structured_output
@@ -129,7 +166,15 @@ def run_pipeline(original_path: str, amendment_path: str) -> ContractChangeOutpu
 
         root_span.update(output=result.model_dump())
 
+        # La URL se pide acá adentro, con el span raíz todavía activo: Langfuse
+        # la arma a partir de la traza en curso.
+        trace_url = langfuse.get_trace_url()
+
     langfuse.flush()
+
+    if not quiet and trace_url:
+        print(f"\nTraza en Langfuse: {trace_url}\n", file=sys.stderr, flush=True)
+
     return result
 
 
@@ -148,7 +193,7 @@ def main() -> None:
         validate_image_path(args.original_path)
         validate_image_path(args.amendment_path)
 
-        result = run_pipeline(args.original_path, args.amendment_path)
+        result = run_pipeline(args.original_path, args.amendment_path, quiet=args.quiet)
     except (FileNotFoundError, ValueError) as exc:
         print(f"Error de entrada: {exc}", file=sys.stderr)
         sys.exit(1)

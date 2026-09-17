@@ -238,6 +238,19 @@ Cada span incluye además metadata para debugging: la versión del pipeline y lo
 modelos usados en la raíz, el nombre y el tamaño del archivo en los spans de
 parsing, y el tamaño de los textos y del mapa de contexto en los de los agentes.
 
+Si una etapa necesitó reintentos, su span queda marcado con nivel `WARNING` y
+con la cantidad, el motivo y los tokens desperdiciados (`wasted_tokens`) en la
+metadata. Sin eso, un reintento solo se notaría como "esta etapa tardó más de lo
+normal".
+
+Los tokens de un intento fallido se consumen igual, así que la excepción los
+transporta para poder sumarlos. No todos los errores gastan tokens: un rate
+limit o un timeout no llegan a generar respuesta, mientras que una negativa del
+modelo sí se paga. Esos tokens quedan registrados en la metadata pero **no** se
+suman al costo que calcula Langfuse, que refleja únicamente el intento exitoso;
+`wasted_tokens` es lo que permite explicar esa diferencia frente a la factura de
+OpenAI.
+
 Con esto, ante cualquier resultado se puede reconstruir el camino completo:
 qué texto leyó el OCR, qué mapa armó el Agente 1 y con qué información decidió
 el Agente 2.
@@ -253,7 +266,7 @@ el Agente 2.
 | Rate limit, timeout, error 5xx o de conexión | Reintenta hasta 3 veces con espera creciente (2 s, 4 s) |
 | API key inválida o request mal formado | Falla sin reintentar, porque reintentar no cambiaría el resultado |
 | Transcripción truncada por límite de tokens | Falla en vez de devolverla (`finish_reason == "length"`) |
-| El modelo responde algo que no es una transcripción | Falla si el texto es sospechosamente corto (menos de 80 caracteres) |
+| El modelo se niega a transcribir | Se detecta por un texto sospechosamente corto (menos de 80 caracteres) y se reintenta, porque es intermitente |
 | Respuesta del Agente 2 truncada o no parseable | Falla con un mensaje explícito en vez de propagar un valor vacío |
 | El JSON no cumple el schema | Error de validación con el detalle de Pydantic |
 
@@ -270,7 +283,15 @@ El chequeo de "respuesta sospechosamente corta" surgió de un caso real durante
 el desarrollo: al probar el límite de tokens, el modelo no truncó la respuesta
 sino que contestó *"Lo siento, no puedo ayudar con eso"*. Como esa respuesta
 termina normalmente, `finish_reason` no la detecta y ese texto se habría
-devuelto como si fuera el contrato.
+devuelto como si fuera el contrato: el sistema habría reportado que la enmienda
+eliminó todas las cláusulas.
+
+Más tarde apareció la misma negativa en una corrida normal, sin límite de
+tokens: sobre la misma imagen, 2 de cada 3 intentos funcionan y 1 falla. Por eso
+se trata como un error transitorio y se reintenta. El criterio para decidir qué
+se reintenta y qué no es siempre el mismo: **¿un reintento puede dar un
+resultado distinto?** Con una negativa intermitente o un rate limit, sí; con una
+API key inválida o una respuesta truncada por el límite de tokens, no.
 
 ## Evaluación de precisión
 
