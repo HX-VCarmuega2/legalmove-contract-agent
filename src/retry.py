@@ -106,6 +106,9 @@ def with_retries(max_attempts: int = 3, backoff_seconds: float = 2.0) -> Callabl
                     if reasons:
                         _record_retries(reasons, errors)
                     return result
+            # También registramos cuando se agotaron los intentos: es el
+            # momento en que más importa saber qué pasó en cada uno.
+            _record_retries(reasons, errors)
             raise RuntimeError(
                 f"Falló la llamada a OpenAI tras {max_attempts} intentos: {last_error}"
             ) from last_error
