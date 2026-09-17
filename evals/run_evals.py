@@ -13,11 +13,18 @@ debería reportar el sistema, para revisarlo a mano.
 from __future__ import annotations
 
 import argparse
+import sys
 import unicodedata
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# La consola de Windows suele usar cp1252 y no puede imprimir "→" ni algunos
+# acentos que aparecen en los resultados.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8")
 
 from evals.cases import CASES, ORIGINAL_TEXT, EvalCase, render_amendment
 from src.agents.contextualization_agent import ContextualizationAgent

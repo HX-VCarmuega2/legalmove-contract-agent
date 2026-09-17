@@ -37,6 +37,14 @@ REQUIRED_ENV_VARS = ("OPENAI_API_KEY",)
 PIPELINE_VERSION = "1.0"
 TOTAL_STEPS = 4
 
+# En Windows la consola suele usar cp1252, que no puede representar caracteres
+# como "→" (lo usamos para las secciones renombradas) ni algunos acentos. Sin
+# esto, el programa puede fallar con UnicodeEncodeError justo al imprimir el
+# resultado, o al redirigir la salida a un archivo.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -102,7 +110,24 @@ def run_pipeline(
 ) -> ContractChangeOutput:
     """Ejecuta el pipeline completo: parsing -> Agente 1 -> Agente 2."""
     langfuse = get_client()
+    # Lista de un elemento porque _run_stages la completa apenas abre la traza:
+    # así tenemos el link incluso si el pipeline falla más adelante.
+    trace_url: list[str] = []
 
+    try:
+        return _run_stages(langfuse, original_path, amendment_path, quiet, trace_url)
+    finally:
+        # El flush va en un finally porque si el pipeline falla queremos la
+        # traza igual (o más): es la que explica en qué etapa se rompió.
+        langfuse.flush()
+        if not quiet and trace_url:
+            print(f"\nTraza en Langfuse: {trace_url[0]}\n", file=sys.stderr, flush=True)
+
+
+def _run_stages(
+    langfuse, original_path: str, amendment_path: str, quiet: bool, trace_url: list[str]
+) -> ContractChangeOutput:
+    """Corre las cuatro etapas dentro de la traza y devuelve el resultado validado."""
     with langfuse.start_as_current_observation(
         name="contract-analysis",
         as_type="span",
@@ -113,6 +138,12 @@ def run_pipeline(
             "agent_model": AGENT_MODEL,
         },
     ) as root_span:
+        # La URL se pide con el span raíz activo: Langfuse la arma a partir de
+        # la traza en curso. Se captura al principio para tenerla también si
+        # alguna etapa falla.
+        current_url = langfuse.get_trace_url()
+        if current_url:
+            trace_url.append(current_url)
 
         with step(1, "Transcribiendo el contrato original", quiet=quiet):
             original_doc = _traced_parse(langfuse, "parse_original_contract", original_path)
@@ -165,17 +196,7 @@ def run_pipeline(
             )
 
         root_span.update(output=result.model_dump())
-
-        # La URL se pide acá adentro, con el span raíz todavía activo: Langfuse
-        # la arma a partir de la traza en curso.
-        trace_url = langfuse.get_trace_url()
-
-    langfuse.flush()
-
-    if not quiet and trace_url:
-        print(f"\nTraza en Langfuse: {trace_url}\n", file=sys.stderr, flush=True)
-
-    return result
+        return result
 
 
 def main() -> None:
