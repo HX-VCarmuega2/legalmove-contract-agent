@@ -215,14 +215,17 @@ def main() -> None:
         validate_image_path(args.amendment_path)
 
         result = run_pipeline(args.original_path, args.amendment_path, quiet=args.quiet)
-    except (FileNotFoundError, ValueError) as exc:
-        print(f"Error de entrada: {exc}", file=sys.stderr)
-        sys.exit(1)
+    # El orden de los except importa: Python usa el primero que coincide, y
+    # ValidationError de Pydantic es hija de ValueError. Si ValueError fuera
+    # primero, un error de validación se reportaría como "Error de entrada".
     except ValidationError as exc:
         print(
             f"El resultado del Agente de Extracción no cumple el schema esperado:\n{exc}",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error de entrada: {exc}", file=sys.stderr)
         sys.exit(1)
     except (RuntimeError, OpenAIError) as exc:
         print(f"Error llamando a la API: {exc}", file=sys.stderr)
