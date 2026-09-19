@@ -14,13 +14,20 @@ class ContractChangeOutput(BaseModel):
     antes de que llegue a producción, en vez de dejar pasar un JSON incompleto.
     """
 
+    # Los ejemplos de las descripciones usan secciones y temas que no aparecen
+    # en ningún contrato de prueba ni en las evals: las descripciones viajan al
+    # modelo como parte del schema, y un ejemplo tomado de un caso de prueba
+    # le daría parte de la respuesta correcta.
     sections_changed: list[str] = Field(
         ...,
         min_length=1,
         description=(
-            "Identificadores o títulos de las secciones/cláusulas del contrato "
-            "que fueron modificadas, agregadas o eliminadas por la enmienda. "
-            "Ejemplo: ['2. Plazo', '3. Pago', '7. Protección de Datos (nueva)']."
+            "Secciones/cláusulas del contrato que fueron modificadas, agregadas o "
+            "eliminadas por la enmienda, identificadas por número y título. Si la "
+            "sección cambió de título, usar 'N. Título original → Título nuevo'; si "
+            "es nueva, agregar '(nueva)'; si fue eliminada, agregar '(eliminada)'. "
+            "Ejemplo: ['4. Garantías', '8. Penalidades → Multas por Incumplimiento', "
+            "'10. Seguros (nueva)', '6. Cesión de Derechos (eliminada)']."
         ),
     )
     topics_touched: list[str] = Field(
@@ -28,7 +35,7 @@ class ContractChangeOutput(BaseModel):
         min_length=1,
         description=(
             "Categorías legales o comerciales afectadas por los cambios. "
-            "Ejemplo: ['plazo contractual', 'condiciones de pago', 'protección de datos']."
+            "Ejemplo: ['garantías', 'penalidades por incumplimiento', 'cobertura de seguros']."
         ),
     )
     summary_of_the_change: str = Field(

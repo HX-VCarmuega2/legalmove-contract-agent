@@ -387,6 +387,13 @@ exactamente las mismas versiones en cualquier máquina.
   cláusulas difieren textualmente, para que el Agente 2 llegue con menos
   trabajo; se descartó por ahora para no mezclar las responsabilidades de los
   dos agentes.
+- **Enmiendas sin cambios.** `ContractChangeOutput` exige al menos una sección
+  y un tema (`min_length=1`), para que el sistema no devuelva una respuesta
+  vacía por error. La contracara es que, si la enmienda no cambia nada, el
+  Agente 2 no tiene cómo responder "no hay cambios" y el schema lo empuja a
+  reportar alguno. Resolverlo requiere una decisión de diseño: permitir listas
+  vacías y explicarlo en el resumen, o agregar un campo que indique
+  explícitamente si hubo cambios.
 - **Un solo formato de entrada.** El sistema acepta imágenes JPEG y PNG de una
   página; no procesa PDFs ni documentos de varias páginas.
 - **Contratos de una sola llamada.** Un contrato muy extenso puede no entrar en
