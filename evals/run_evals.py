@@ -47,6 +47,9 @@ def check_case(case: EvalCase, result: ContractChangeOutput) -> list[tuple[str, 
         (f'no lista "{keyword}" como sección cambiada', normalize(keyword) not in sections)
         for keyword in case.must_not_list_sections
     ]
+    if case.expect_empty:
+        checks.append(("sections_changed viene vacía", len(result.sections_changed) == 0))
+        checks.append(("topics_touched viene vacía", len(result.topics_touched) == 0))
     return checks
 
 

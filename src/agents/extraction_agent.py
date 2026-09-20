@@ -66,6 +66,10 @@ título cambió, usá el formato "N. Título original → Título nuevo". Si la 
 sección es nueva, agregá "(nueva)"; si fue eliminada, agregá "(eliminada)".
 - Tu respuesta debe cumplir exactamente el schema indicado (sections_changed, \
 topics_touched, summary_of_the_change).
+- Si los dos documentos son idénticos o la enmienda no introduce ningún \
+cambio, devolvé sections_changed y topics_touched como listas VACÍAS y \
+explicá en el resumen que no se detectaron cambios. Nunca llenes esas listas \
+con secciones que no cambiaron solo para no devolverlas vacías.
 
 Verificación obligatoria antes de responder: por cada cambio que vayas a \
 reportar, releé el CONTRATO ORIGINAL y la ENMIENDA y confirmá que podés citar \

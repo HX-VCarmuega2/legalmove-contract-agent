@@ -75,6 +75,7 @@ class EvalCase:
     amendment_clauses: list[Clause]
     must_mention: list[str]  # deben aparecer en sections_changed o en el resumen
     must_not_list_sections: list[str]  # no deben aparecer en sections_changed (falsos positivos)
+    expect_empty: bool = False  # se espera que no reporte ningún cambio
 
 
 CASES: list[EvalCase] = [
@@ -213,5 +214,22 @@ CASES: list[EvalCase] = [
         ],
         must_mention=["exclusivamente", "colaboración"],
         must_not_list_sections=["objeto", "alcance", "restricción", "plazo", "jurisdicción"],
+    ),
+    EvalCase(
+        name="sin_cambios",
+        change=(
+            "La enmienda repite el acuerdo sin tocar ninguna cláusula: solo cambia el "
+            "encabezado del documento."
+        ),
+        expected=(
+            "Listas VACÍAS y un resumen que aclare que no se detectaron cambios. No debe "
+            "listar como cambiadas secciones que siguen idénticas."
+        ),
+        amendment_clauses=list(ORIGINAL_CLAUSES),
+        must_mention=[],
+        must_not_list_sections=[
+            "objeto", "obligaciones", "alcance", "restricción", "plazo", "jurisdicción",
+        ],
+        expect_empty=True,
     ),
 ]

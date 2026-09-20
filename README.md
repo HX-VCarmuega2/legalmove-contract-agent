@@ -351,6 +351,14 @@ obliga al modelo a respetar el schema, pero el resultado se valida otra vez con
 `ContractChangeOutput.model_validate()` antes de salir del pipeline. La salida
 de un modelo se trata como un dato no confiable hasta validarla.
 
+**Listas que pueden venir vacías.** `sections_changed` y `topics_touched`
+admiten listas vacías, y el prompt del Agente 2 le indica devolverlas así
+cuando la enmienda no introduce cambios. La versión anterior exigía al menos un
+elemento, y al comparar un contrato contra sí mismo el modelo **llenaba las
+listas con las cinco secciones** mientras el resumen aclaraba que no había
+cambios: un JSON válido, pero con cinco falsos positivos para el sistema que
+consume esos campos. El caso quedó fijado en las evaluaciones (`sin_cambios`).
+
 **Prompts con verificación de evidencia.** Durante el desarrollo, una ejecución
 del Par 1 reportó una cláusula de "Renovación Automática" que no existe en
 ninguno de los dos documentos. El texto del OCR era correcto, así que el error
@@ -389,13 +397,6 @@ exactamente las mismas versiones en cualquier máquina.
   cláusulas difieren textualmente, para que el Agente 2 llegue con menos
   trabajo; se descartó por ahora para no mezclar las responsabilidades de los
   dos agentes.
-- **Enmiendas sin cambios.** `ContractChangeOutput` exige al menos una sección
-  y un tema (`min_length=1`), para que el sistema no devuelva una respuesta
-  vacía por error. La contracara es que, si la enmienda no cambia nada, el
-  Agente 2 no tiene cómo responder "no hay cambios" y el schema lo empuja a
-  reportar alguno. Resolverlo requiere una decisión de diseño: permitir listas
-  vacías y explicarlo en el resumen, o agregar un campo que indique
-  explícitamente si hubo cambios.
 - **Un solo formato de entrada.** El sistema acepta imágenes JPEG y PNG de una
   página; no procesa PDFs ni documentos de varias páginas.
 - **Contratos de una sola llamada.** Un contrato muy extenso puede no entrar en

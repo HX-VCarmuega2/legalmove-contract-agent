@@ -18,21 +18,24 @@ class ContractChangeOutput(BaseModel):
     # en ningún contrato de prueba ni en las evals: las descripciones viajan al
     # modelo como parte del schema, y un ejemplo tomado de un caso de prueba
     # le daría parte de la respuesta correcta.
+    # Las listas pueden venir vacías a propósito: es la única forma de que el
+    # sistema pueda responder "no hay cambios" sin inventar uno para cumplir el
+    # schema. Con min_length=1, al comparar un contrato contra sí mismo el
+    # modelo llenaba las listas con todas las secciones.
     sections_changed: list[str] = Field(
         ...,
-        min_length=1,
         description=(
             "Secciones/cláusulas del contrato que fueron modificadas, agregadas o "
             "eliminadas por la enmienda, identificadas por número y título. Si la "
             "sección cambió de título, usar 'N. Título original → Título nuevo'; si "
             "es nueva, agregar '(nueva)'; si fue eliminada, agregar '(eliminada)'. "
             "Ejemplo: ['4. Garantías', '8. Penalidades → Multas por Incumplimiento', "
-            "'10. Seguros (nueva)', '6. Cesión de Derechos (eliminada)']."
+            "'10. Seguros (nueva)', '6. Cesión de Derechos (eliminada)']. "
+            "Lista vacía si la enmienda no introduce ningún cambio."
         ),
     )
     topics_touched: list[str] = Field(
         ...,
-        min_length=1,
         description=(
             "Categorías legales o comerciales afectadas por los cambios. "
             "Ejemplo: ['garantías', 'penalidades por incumplimiento', 'cobertura de seguros']."
