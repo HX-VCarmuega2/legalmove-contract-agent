@@ -95,8 +95,10 @@ Separarlos da tres ventajas:
 legalmove-contract-agent/
 ├── src/
 │   ├── main.py                       # Entry point, orquestación y spans de Langfuse
+│   ├── config.py                     # Qué modelo usa cada etapa (única fuente de verdad)
 │   ├── image_parser.py               # Validación, encoding base64 y llamada a GPT-4o Vision
 │   ├── models.py                     # ContractChangeOutput (Pydantic)
+│   ├── errors.py                     # Excepciones propias del pipeline
 │   ├── retry.py                      # Reintentos ante errores transitorios de la API
 │   └── agents/
 │       ├── contextualization_agent.py   # Agente 1

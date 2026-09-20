@@ -10,9 +10,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from src.agents.results import ContextResult, normalize_usage
+from src.config import AGENT_MODEL
 from src.retry import with_retries
-
-AGENT_MODEL = "gpt-4o"
 
 _SYSTEM_PROMPT = """\
 Sos un Analista Legal Senior especializado en derecho contractual, con años de \

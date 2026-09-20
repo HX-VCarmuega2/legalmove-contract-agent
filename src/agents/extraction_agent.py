@@ -11,10 +11,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from src.agents.results import ExtractionResult, normalize_usage
+from src.config import AGENT_MODEL
 from src.models import ContractChangeOutput
 from src.retry import with_retries
-
-AGENT_MODEL = "gpt-4o"
 
 _SYSTEM_PROMPT = """\
 Sos un Auditor Legal especializado en control de cambios (redlining) de \

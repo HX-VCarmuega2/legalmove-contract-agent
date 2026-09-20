@@ -28,9 +28,10 @@ load_dotenv()
 
 from langfuse import get_client
 
-from src.agents.contextualization_agent import AGENT_MODEL, ContextualizationAgent
+from src.agents.contextualization_agent import ContextualizationAgent
 from src.agents.extraction_agent import ExtractionAgent
-from src.image_parser import VISION_MODEL, ParsedDocument, parse_contract_image, validate_image_path
+from src.config import AGENT_MODEL, VISION_MODEL
+from src.image_parser import ParsedDocument, parse_contract_image, validate_image_path
 from src.models import ContractChangeOutput
 
 REQUIRED_ENV_VARS = ("OPENAI_API_KEY",)

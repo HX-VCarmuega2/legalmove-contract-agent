@@ -12,11 +12,11 @@ from pathlib import Path
 
 from openai import OpenAI
 
+from src.config import VISION_MODEL
 from src.errors import TranscriptionRefusedError
 from src.retry import with_retries
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-VISION_MODEL = "gpt-4o"
 
 # Primeros bytes que identifican a cada formato ("magic bytes"). Sirven para
 # detectar un archivo corrupto o renombrado (un .txt con extensión .jpg) sin
