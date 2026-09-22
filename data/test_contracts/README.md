@@ -59,6 +59,28 @@ Partes: Orion Consulting Group (Consultor) y GreenWave Energía S.A. (Cliente).
 
 Las secciones 5 (Confidencialidad) y 6 (Legislación Aplicable) no cambian.
 
+## Par 4 — Archivo inválido (para probar el manejo de errores)
+
+`par4_original.jpg` / `par4_enmienda.jpg`
+
+**`par4_original.jpg` no es una imagen: es un PDF renombrado**, el caso típico
+de alguien que exporta un documento y le cambia la extensión a mano. La
+enmienda es válida (una copia del Par 1).
+
+Sirve para verificar que el sistema detecta el problema **antes** de llamar a
+la API, comparando los primeros bytes del archivo contra su extensión:
+
+```
+[1/4] Transcribiendo el contrato original... ERROR
+
+Traza en Langfuse: https://cloud.langfuse.com/...
+
+Error de entrada: El archivo par4_original.jpg tiene extensión '.jpg' pero su
+contenido no corresponde a ese formato: puede estar corrupto o mal renombrado.
+```
+
+Termina con código de salida `1` y sin consumir una sola llamada al modelo.
+
 ## Uso
 
 Desde la raíz del proyecto, con el entorno virtual activado:
@@ -67,4 +89,7 @@ Desde la raíz del proyecto, con el entorno virtual activado:
 python -m src.main data/test_contracts/par1_original.jpg data/test_contracts/par1_enmienda.jpg
 python -m src.main data/test_contracts/par2_original.jpg data/test_contracts/par2_enmienda.jpg
 python -m src.main data/test_contracts/par3_original.jpg data/test_contracts/par3_enmienda.jpg
+
+# Manejo de errores: falla antes de llamar a la API
+python -m src.main data/test_contracts/par4_original.jpg data/test_contracts/par4_enmienda.jpg
 ```

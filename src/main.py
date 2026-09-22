@@ -97,7 +97,16 @@ def _traced_parse(langfuse, span_name: str, image_path: str) -> ParsedDocument:
             "image_detail": "high",
         },
     ) as span:
-        doc = parse_contract_image(image_path)
+        try:
+            doc = parse_contract_image(image_path)
+        except Exception:
+            # Si la etapa falla antes de llamar al modelo (archivo corrupto,
+            # por ejemplo), informamos consumo cero explícito. Sin esto,
+            # Langfuse estima tokens y costo a partir del texto del span y la
+            # traza muestra un gasto que en realidad nunca ocurrió.
+            span.update(usage_details={"input": 0, "output": 0, "total": 0})
+            raise
+
         span.update(
             output=doc.text,
             usage_details=doc.usage,
