@@ -13,7 +13,7 @@ from pathlib import Path
 from openai import OpenAI
 
 from src.config import VISION_MODEL
-from src.errors import TranscriptionRefusedError
+from src.errors import TranscriptionRefusedError, TranscriptionTruncatedError
 from src.retry import with_retries
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -130,19 +130,20 @@ def parse_contract_image(
     )
 
     choice = response.choices[0]
+    usage = response.usage.model_dump() if response.usage else {}
 
     # finish_reason == "length" significa que el modelo se quedó sin tokens y
     # la transcripción quedó cortada. Devolverla sería peor que fallar: los
     # agentes compararían contra un contrato incompleto y reportarían como
     # eliminadas cláusulas que en realidad no se alcanzaron a transcribir.
     if choice.finish_reason == "length":
-        raise RuntimeError(
+        raise TranscriptionTruncatedError(
             f"La transcripción de {image_path} quedó truncada por el límite de tokens. "
-            "Probá con una imagen de menor resolución o subí el límite de salida."
+            "Probá con una imagen de menor resolución o subí el límite de salida.",
+            usage=usage,
         )
 
     text = choice.message.content or ""
-    usage = response.usage.model_dump() if response.usage else {}
 
     # El modelo puede responder algo tipo "Lo siento, no puedo ayudar con eso"
     # en vez de transcribir (por ejemplo, si la imagen es ilegible o si se

@@ -99,12 +99,21 @@ def _traced_parse(langfuse, span_name: str, image_path: str) -> ParsedDocument:
     ) as span:
         try:
             doc = parse_contract_image(image_path)
-        except Exception:
-            # Si la etapa falla antes de llamar al modelo (archivo corrupto,
-            # por ejemplo), informamos consumo cero explícito. Sin esto,
-            # Langfuse estima tokens y costo a partir del texto del span y la
-            # traza muestra un gasto que en realidad nunca ocurrió.
-            span.update(usage_details={"input": 0, "output": 0, "total": 0})
+        except Exception as exc:
+            # Si la etapa falla, informamos el consumo explícitamente. Sin
+            # esto, Langfuse lo estima a partir del texto del span y muestra
+            # un gasto que no corresponde. Hay dos casos distintos:
+            #   - falló antes de llamar al modelo (archivo corrupto): cero;
+            #   - el modelo respondió (se negó a transcribir, o la respuesta
+            #     quedó truncada): esos tokens se consumieron igual y viajan
+            #     dentro de la excepción, que es un ModelCallError.
+            # El __cause__ es para cuando with_retries agotó los intentos y
+            # envolvió el error original: el consumo quedó en la excepción
+            # encadenada, no en la que llega acá.
+            failed_usage = getattr(exc, "usage", None) or getattr(
+                exc.__cause__, "usage", None
+            )
+            span.update(usage_details=failed_usage or {"input": 0, "output": 0, "total": 0})
             raise
 
         span.update(

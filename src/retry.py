@@ -12,6 +12,12 @@ from src.errors import TranscriptionRefusedError
 
 T = TypeVar("T")
 
+# Cuánto del mensaje de error guardamos como motivo del reintento. El mensaje
+# de TranscriptionRefusedError termina con la respuesta textual del modelo
+# ("Respuesta recibida: ..."), que es lo primero que uno quiere ver en la
+# traza: con menos de esto, el corte cae justo antes de esa parte.
+MAX_REASON_CHARS = 300
+
 RETRYABLE_ERRORS = (
     openai.RateLimitError,
     openai.APITimeoutError,
@@ -84,7 +90,7 @@ def with_retries(max_attempts: int = 3, backoff_seconds: float = 2.0) -> Callabl
                 except RETRYABLE_ERRORS as exc:
                     last_error = exc
                     errors.append(exc)
-                    reason = f"{type(exc).__name__}: {str(exc)[:120]}"
+                    reason = f"{type(exc).__name__}: {str(exc)[:MAX_REASON_CHARS]}"
                     reasons.append(reason)
                     if attempt == max_attempts:
                         break
